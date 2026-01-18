@@ -3,11 +3,21 @@ import random
 import re
 import time
 
-# Initialize sentiment pipeline safely
+# MISSING FUNCTION #1 - Add this!
+def get_safe_sentiment(text):
+    """Safe sentiment analysis - no crashes"""
+    try:
+        sentiment = pipeline("sentiment-analysis", framework="pt")
+        result = sentiment(text)[0]
+        score = result['score'] if result['label'] == 'POSITIVE' else -result['score']
+        return score
+    except:
+        return 0.0  # Safe default
+
+# Initialize sentiment pipeline safely (backup)
 try:
     sentiment = pipeline("sentiment-analysis", framework="pt")
 except:
-    # Fallback if transformers fails
     sentiment = [{"label": "POSITIVE", "score": 0.5}] * 1
 
 intent_patterns = {
@@ -28,7 +38,7 @@ conversation_context = {
 
 motivation_stats = {'total': 0, 'motivational': 0, 'actionable': 0}
 
-dedef detect_intent(text):
+def detect_intent(text):
     text_lower = text.lower()
     
     # PRIORITY 1: STRESS WORDS (EVEN IF "exam" mentioned)
@@ -42,8 +52,7 @@ dedef detect_intent(text):
         return 'need_plan'
     
     # PRIORITY 3: EXAM READY (only if NO stress/plan words)
-    ready_words = ['ready', 'prepared', 'confident', 'excited']
-    if any(word in text_lower for word in ready_words):
+    if 'exam' in text_lower and any(word in text_lower for word in ['ready', 'prepared', 'confident', 'tomorrow', 'excited']):
         return 'exam_ready'
     
     # PRIORITY 4: ENCOURAGEMENT
@@ -51,7 +60,6 @@ dedef detect_intent(text):
         return 'encouragement'
     
     return 'general'
-
 
 def is_motivational_response(response):
     motivation_words = ['now', 'start', 'go', 'crush', 'attack', 'execute', 'plan', 
@@ -82,12 +90,12 @@ def get_context_aware_response(text):
     
     # FIXED: SAFE sentiment + intent detection
     score = get_safe_sentiment(text)
-    intent = detect_intent(text)  # Now ALWAYS returns valid key
+    intent = detect_intent(text)
     
     if intent == 'need_plan':
         conversation_context['needs_study_plan'] = True
     
-    # ALL 5 VALID INTENT KEYS (NO KeyError possible)
+    # ALL 5 VALID INTENT KEYS
     responses = {
         'exam_ready': [
             "🎯 CHAMPION MINDSET! You're walking into that exam like a BOSS tomorrow! 💪",
@@ -113,7 +121,7 @@ def get_context_aware_response(text):
             "🚨 **STRESS PROTOCOL:**\n✅ 4-7-8 breathing → Easiest topic first → Small wins = BIG confidence!\n\nStart with 1 question?",
             "💙 Feeling this = you're close to breakthrough! 2min walk → 1 page notes → CRUSH! ⏳"
         ],
-        'general': [  # FIXED: 'general' key GUARANTEED
+        'general': [
             "⚡ **25MIN ATTACK MODE!** Pick 1 topic → Execute → Celebrate! Ready? START NOW! 🚀",
             "🎯 MOMENTUM CHAIN ACTIVE! 25min focused work → break → repeat = UNSTOPPABLE! 💥",
             "🔥 You're building WINNER habits! Quick: what's your next 25min target? GO TIME! ⏰",
@@ -121,7 +129,6 @@ def get_context_aware_response(text):
         ]
     }
     
-    # FIXED: Safe intent selection (always exists)
     response = random.choice(responses.get(intent, responses['general']))
     
     # Track motivation stats
