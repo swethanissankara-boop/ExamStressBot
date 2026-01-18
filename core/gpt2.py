@@ -28,23 +28,30 @@ conversation_context = {
 
 motivation_stats = {'total': 0, 'motivational': 0, 'actionable': 0}
 
-def detect_intent(text):
-    """FIXED: Returns VALID intent keys ONLY"""
+dedef detect_intent(text):
     text_lower = text.lower()
     
-    for intent, patterns in intent_patterns.items():
-        if any(word in text_lower for word in patterns):
-            return intent
+    # PRIORITY 1: STRESS WORDS (EVEN IF "exam" mentioned)
+    stress_words = ['stress', 'anxious', 'nervous', 'worried', 'scared', 'afraid', 'panic', 'killing', 'die', 'tired', 'hate']
+    if any(word in text_lower for word in stress_words):
+        return 'stressed'
     
-    return 'general'  # SAFE FALLBACK - ALWAYS exists
+    # PRIORITY 2: PLAN REQUESTS
+    plan_words = ['plan', 'guide', 'strategy', 'schedule', 'what next', 'how to']
+    if any(word in text_lower for word in plan_words):
+        return 'need_plan'
+    
+    # PRIORITY 3: EXAM READY (only if NO stress/plan words)
+    ready_words = ['ready', 'prepared', 'confident', 'excited']
+    if any(word in text_lower for word in ready_words):
+        return 'exam_ready'
+    
+    # PRIORITY 4: ENCOURAGEMENT
+    if any(word in text_lower for word in ['yeah', 'yes', 'ok', 'cool', 'great']):
+        return 'encouragement'
+    
+    return 'general'
 
-def get_safe_sentiment(text):
-    """FIXED: Safe sentiment analysis"""
-    try:
-        result = sentiment(text)[0]
-        return result['score'] if result['label'] == 'NEGATIVE' else 0.0
-    except:
-        return 0.5  # Neutral fallback
 
 def is_motivational_response(response):
     motivation_words = ['now', 'start', 'go', 'crush', 'attack', 'execute', 'plan', 
